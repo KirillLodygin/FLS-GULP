@@ -1,19 +1,3 @@
-//const gulp = require('gulp');
-//const autoprefixer = require('gulp-autoprefixer');
-//const cssnano = require('gulp-cssnano')
-
-/*
-exports.default = () => (
-    gulp.src('#src/scss/styles.scss')
-        .pipe(autoprefixer({
-            browsers: ['last 2 versions'],
-            cascade: false
-        }))
-        .pipe(cssnano())
-        .pipe(gulp.dest('#src/scss/'))
-);
-
- */
 const project_folder = 'dist';
 const source_folder = '#src';
 
@@ -26,7 +10,7 @@ const path = {
         fonts: project_folder + '/fonts/'
     },
     src: {
-        html: source_folder + '/*.html',
+        html: [source_folder + '/*.html', '!' + source_folder + '/_*.html'],
         css: source_folder + '/scss/styles.scss',
         js: source_folder + '/js/script.js',
         img: source_folder + '/img/**/*.{jpg,png,svg,gif,ico,webp}',
@@ -44,7 +28,18 @@ const path = {
 const {src, dest} = require('gulp'),
     gulp = require('gulp'),
     browsersync = require('browser-sync').create(),
-    fileinclude = require('gulp-file-include');
+    fileinclude = require('gulp-file-include'),
+    del = require('del'),
+    scsss = require('gulp-sass'),
+    autoprefixer = require('gulp-autoprefixer'),
+    group_media = require('gulp-group-css-media-queries'),
+    clean_css = require('gulp-clean-css'),
+    rename = require('gulp-rename'),
+    uglify = require('gulp-uglify-es').default,
+    babel = require('gulp-babel'),
+    imagemin = require('gulp-imagemin'),
+    webp = require('gulp-webp'),
+    webpHTML = require('gulp-webp-html');
 
 const browserSync = (params) => {
     browsersync.init({
@@ -59,14 +54,96 @@ const browserSync = (params) => {
 const html = () => (
     src(path.src.html)
         .pipe(fileinclude())
+        .pipe(webpHTML())
         .pipe(dest(path.build.html))
         .pipe(browsersync.stream())
 );
 
-const build = gulp.series(html);
-const watch = gulp.parallel(build, browserSync);
+const css = () => (
+    src(path.src.css)
+        .pipe(
+            scsss({
+                outputStyle: 'expanded'
+            })
+        )
+        .pipe(group_media())
+        .pipe(
+            autoprefixer({
+                overrideBrowserslist: ['last 5 versions'],
+                cascade: true
+            })
+        )
+        .pipe(dest(path.build.css))
+        .pipe(clean_css())
+        .pipe(
+            rename({
+                extname: '.min.css'
+            })
+        )
+        .pipe(dest(path.build.css))
+        .pipe(browsersync.stream())
+);
 
+const js = () => (
+    src(path.src.js)
+        .pipe(fileinclude())
+        .pipe(
+            babel({
+                presets: ['@babel/env']
+            })
+        )
+        .pipe(dest(path.build.js))
+        .pipe(uglify())
+        .pipe(
+            rename({
+                extname: '.min.js'
+            })
+        )
+        .pipe(dest(path.build.js))
+        .pipe(browsersync.stream())
+);
+
+const images = () => (
+    src(path.src.img)
+        .pipe(webp({
+            quality: 70
+        }))
+        .pipe(dest(path.build.img))
+        .pipe(src(path.src.img))
+        .pipe(
+            imagemin({
+                interlaced: true,
+                progressive: true,
+                optimizationLevel: 3,
+                svgoPlugins: [
+                    {
+                        removeViewBox: true
+                    }
+                ]
+            })
+        )
+        .pipe(dest(path.build.img))
+        .pipe(browsersync.stream())
+);
+
+const watchfiles = (params) => {
+    gulp.watch([path.watch.html], html);
+    gulp.watch([path.watch.css], css);
+    gulp.watch([path.watch.js], js);
+    gulp.watch([path.watch.img], images);
+};
+
+const clean = (params) => {
+    return del(path.clean);
+};
+
+const build = gulp.series(clean, gulp.parallel(js, css, html, images));
+const watch = gulp.parallel(build, watchfiles, browserSync);
+
+exports.images = images;
 exports.html = html;
+exports.css = css;
+exports.js = js;
 exports.build = build;
 exports.watch = watch;
 exports.default = watch;
