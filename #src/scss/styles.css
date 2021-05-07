@@ -1,3 +1,15 @@
+@font-face {
+  font-family: "Montserrat";
+  font-display: swap;
+  src: url("../fonts/Montserrat.woff") format("woff"), url("../fonts/Montserrat.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal; }
+@font-face {
+  font-family: "Yahfie";
+  font-display: swap;
+  src: url("../fonts/Yahfie.woff") format("woff"), url("../fonts/Yahfie.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal; }
 body {
   font-size: 16px;
   display: flex; }
